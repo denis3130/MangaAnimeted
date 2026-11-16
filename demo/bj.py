@@ -25,6 +25,7 @@ W, H, FPS, SR = 1920, 1080, 30, 44100
 FONT_B = "/usr/share/fonts/opentype/inter/Inter-Bold.otf"
 FONT_I = "/usr/share/fonts/opentype/inter/Inter-SemiBoldItalic.otf"
 FONT_JP = "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf"
+VOICE_ON = False  # niente voci parlanti: solo musica ed effetti
 XF = 0.4  # durata dissolvenza incrociata tra le inquadrature
 
 # ------------------------------------------------------------------ voci
@@ -369,8 +370,25 @@ def build_audio():
     mix[T(e0) + T(0.05):] = 0
     for f in (110, 220, 261.6, 329.6):
         add(piano(f, 4.5, 1.0), e0 + 0.6, 0.09)
+    # tappeto di tensione (archi sintetici) dallo schianto al finale, in crescendo
+    a0, a1 = st[4], st[14]
+    n = T(a1 - a0); tt_ = np.arange(n) / SR
+    pad = np.zeros(n, np.float32)
+    for f0, g in ((55, 1.0), (82.4, 0.6), (110, 0.5), (116.5, 0.25)):  # cluster cupo con semitono dissonante
+        for det in (0.997, 1.0, 1.003):
+            f = f0 * det * (1 + 0.06 * (tt_ / tt_[-1]))  # sale lentamente di intonazione
+            pad += g * (2 * ((np.cumsum(f) / SR) % 1) - 1).astype(np.float32)
+    pad = lowpass(lowpass(pad, 30), 30) * np.linspace(0.15, 1.0, n).astype(np.float32) * env(n, 2.0, 0.05)
+    add(pad, a0, 0.05)
+    # ostinato di piano grave nella parte dell'ambulanza
+    bt = st[6]
+    while bt < st[13]:
+        add(piano(110, 1.2), bt, 0.07); add(piano(116.5, 1.2), bt + 0.3, 0.05)
+        bt += 0.6
+    if not VOICE_ON:
+        SUBS_ONLY = True
     # voci, con ducking
-    for s in SHOTS:
+    for s in (SHOTS if VOICE_ON else []):
         for key, off in s.get("vo", []):
             at = s["start"] + off
             v = VO[key]
