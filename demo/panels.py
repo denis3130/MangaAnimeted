@@ -27,7 +27,11 @@ def _bands(profile, thr, min_gap):
 
 def detect(path, min_size=0.12):
     im = Image.open(path).convert("L")
-    a = np.asarray(im) < 235
+    g = np.asarray(im).astype(np.int16)
+    # colore di sfondo stimato dal bordo pagina (bianco, grigio acquerello, ecc.)
+    border = np.concatenate([g[:8].ravel(), g[-8:].ravel(), g[:, :8].ravel(), g[:, -8:].ravel()])
+    bg = int(np.median(border))
+    a = np.abs(g - bg) > (20 if bg > 230 else 45)
     H, W = a.shape
     gap = 2
     out = []
