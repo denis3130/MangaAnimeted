@@ -1,0 +1,48 @@
+# Stile della casa MangaAnimeted: valori in numeri, mai aggettivi.
+# Ogni regia eredita da qui; una singola inquadratura puo' sovrascrivere un valore.
+# Quando un errore si ripete in piu' video, la regola va corretta QUI (e annotata in
+# .claude/skills/motion-manga/SKILL.md, sezione "Errori gia' risolti").
+
+video:
+  w: 1280
+  h: 720
+  fps: 30
+  crf: 21
+
+regole:
+  durata_min: 1.2          # s: sotto questo una vignetta non si legge
+  riempi_se_larga: 1.45    # rapporto L/A oltre il quale la vignetta riempie lo schermo
+  margine: [0.92, 0.94]    # quota di schermo occupata da una vignetta non larga (L, A)
+  dissolvenza: 0.2         # s, per le inquadrature con entrata: dissolvenza
+  fade_inizio: 0.6         # s di nero in apertura
+  fade_fine: 1.2           # s di nero in chiusura
+  sfondo_blur: 25          # sigma della vignetta sfocata dietro le vignette piccole
+  sfondo_luce: 0.25        # luminosita' dello sfondo sfocato
+  vignettatura: {raggio: 0.7, morbidezza: 0.7, forza: 0.55}
+  tinta: [0.93, 0.97, 1.0] # moltiplicatore RGB (freddo, come l'anime)
+  grana: 3.0               # deviazione standard del rumore, livelli 0-255
+  clip_fps: 16             # velocita' di lettura delle clip AI (avanti e indietro, senza scatti)
+
+# Valori di default per tag. zoom = [inizio, fine]; pan = punti di fuoco [x, y] in coordinate
+# della vignetta (0-1), da -> a; "auto" sceglie in base alla forma. shake = pixel, decade in 0.6 s.
+tag:
+  calm:    {dur: 3.2, zoom: [1.0, 1.06], pan: auto}
+  listen:  {dur: 1.6, zoom: [1.04, 1.0], pan: null}      # reazione muta: piccolo zoom indietro
+  dialog:  {dur: 3.6, zoom: [1.0, 1.05], pan: null}
+  tense:   {dur: 2.8, zoom: [1.0, 1.10], pan: null}
+  dark:    {dur: 4.0, zoom: [1.0, 1.12], pan: null}      # chiusura lenta nel buio
+  hit:     {dur: 2.0, zoom: [1.0, 1.18], pan: null, shake: 18, flash: true}
+  big:     {dur: 3.6, zoom: [1.0, 1.18], pan: null, shake: 26, flash: true}
+  run:     {dur: 2.4, zoom: [1.12, 1.12], pan: [[0.85, 0.5], [0.15, 0.5]]}
+  title:   {dur: 6.0, zoom: [1.0, 1.12], pan: [[0.0, 0.5], [1.0, 0.5]]}
+  final:   {dur: 5.0, zoom: [1.0, 1.08], pan: null}
+
+# Effetti sonori per tag (file in audio.sfx_dir della regia). Volume massimo 0.8:
+# effetti troppo forti e tutti uguali sono il primo segno di un video "fatto con l'IA".
+sfx:
+  vol_max: 0.8
+  musica_vol: 0.6
+  per_tag:
+    hit: [{file: impatto, vol: 0.7}]
+    big: [{file: impatto_grande, vol: 0.8}]
+    run: [{file: whoosh, vol: 0.45}]
