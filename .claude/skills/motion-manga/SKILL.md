@@ -24,7 +24,11 @@ Non scrivere un nuovo script per ogni manga: se manca una funzione, aggiungila a
 5. **Render.** `python -m engine render regie/x.yaml`. Va a spezzoni (uno per inquadratura) in parallelo e li tiene
    in cache in `demo/output/.spezzoni/`: dopo una correzione si rifanno solo gli spezzoni cambiati.
    `--rifai 3,7` forza il rifacimento di inquadrature precise.
-6. **Revisione.** L'utente guarda il video e scrive note con il numero di inquadratura o il minuto. Correggi la regia.
+6. **Revisione.** `python -m engine anteprima regie/x.yaml` e apri http://127.0.0.1:8765: la regia si vede subito
+   nel browser (stessa camera del motore, senza grana), si mette in pausa e si scrivono note (tasto N).
+   Le note finiscono in `regie/<nome>.note.md` come `- [ ] minuto #inquadratura testo`. Leggile, correggi la regia
+   e spunta `[x]` le note risolte: la pagina si aggiorna da sola. Renderizza solo quando l'anteprima va bene.
+   Se cambi la camera in `engine/motore.py`, cambia uguale `engine/anteprima.html` (le due devono coincidere).
    **Se la stessa nota torna in due video diversi, correggi lo stile (`engine/stile.yaml` o il motore) e aggiungi
    una riga in "Errori gia' risolti" qui sotto**: non correggere solo il video.
 
