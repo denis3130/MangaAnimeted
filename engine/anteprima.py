@@ -131,6 +131,33 @@ class Preview:
         return line
 
 
+def export(path, out=None):
+    """Anteprima in un unico file HTML (tavole, clip e audio dentro): si apre ovunque, anche dal telefono.
+    Le note restano nel browser; il bottone "Copia note" le copia per incollarle in chat."""
+    import base64
+    import subprocess
+    import tempfile
+    pv = Preview(path)
+    if pv.error:
+        raise SystemExit(pv.error)
+    d = pv.data()
+    b64 = lambda b, mime: f"data:{mime};base64," + base64.b64encode(b).decode()
+    tav = {n: b64(pv.page_jpg(n), "image/jpeg") for n in {s["tavola"] for s in d["inquadrature"] if "tavola" in s}}
+    clip = {k: b64(pv.sprite(k)[0], "image/jpeg") for k in {s["clip"] for s in d["inquadrature"] if "clip" in s}}
+    with tempfile.TemporaryDirectory() as tmp:
+        wav, m4a = Path(tmp) / "a.wav", Path(tmp) / "a.m4a"
+        pv.film.audio(wav)
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav), "-c:a", "aac", "-b:a", "128k", str(m4a)], check=True)
+        audio = b64(m4a.read_bytes(), "audio/mp4")
+    emb = json.dumps({"regia": d, "tavole": tav, "clip": clip, "audio": audio})
+    html = HTML.read_text().replace("<!--EMBED-->", f"<script>window.EMBED = {emb};</script>")
+    out = Path(out or Path(pv.film.r["output"]).with_suffix(".anteprima.html"))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(html)
+    print(f"scritto {out} ({out.stat().st_size / 1e6:.1f} MB)")
+    return out
+
+
 def serve(path, port=8765, open_host="127.0.0.1"):
     pv = Preview(path)
 

@@ -44,6 +44,7 @@
     <button id="play">Play</button>
     <button id="prev" title="Inquadratura precedente">&#9664;&#9664;</button>
     <button id="next" title="Inquadratura successiva">&#9654;&#9654;</button>
+    <button id="copy" title="Copia tutte le note da incollare in chat">Copia note</button>
     <span id="time">00:00.0 / 00:00.0</span>
     <span id="shot" class="muted"></span>
   </div>
@@ -55,8 +56,13 @@
   <div class="muted keys"><kbd>spazio</kbd> play/pausa · <kbd>&larr;</kbd><kbd>&rarr;</kbd> 1 s · <kbd>,</kbd><kbd>.</kbd> 1 fotogramma · <kbd>[</kbd><kbd>]</kbd> inquadratura · <kbd>N</kbd> scrivi nota (mette in pausa) · la pagina si aggiorna da sola quando cambia la regia</div>
   <ul id="notes"></ul>
 </main>
-<script>
+<!--EMBED--><script>
 const $ = id => document.getElementById(id);
+const EMBED = window.EMBED || null;  // file unico esportato: dati dentro la pagina, note salvate nel browser
+const NKEY = () => 'note:' + (EMBED ? EMBED.regia.nome : '');
+function localNotes() { try { return JSON.parse(localStorage.getItem(NKEY()) || '[]'); } catch (e) { return MEM; } }
+let MEM = [];
+function saveLocal(L) { MEM = L; try { localStorage.setItem(NKEY(), JSON.stringify(L)); } catch (e) {} }
 const cv = $('cv'), ctx = cv.getContext('2d');
 let R = null, IMG = {}, SPR = {}, ver = null, t = 0, playing = false, last = 0;
 const audio = new Audio();
@@ -67,14 +73,14 @@ const fmt = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${(s % 60).toFi
 const load = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => ok(null); i.src = src; });
 
 async function fetchRegia(keepT) {
-  const d = await (await fetch('/regia.json')).json();
+  const d = EMBED ? EMBED.regia : await (await fetch('/regia.json')).json();
   ver = d.versione;
   if (d.errore) { $('err').style.display = 'block'; $('err').textContent = d.errore; $('stato').textContent = 'regia con errori: correggi il file, la pagina si aggiorna'; return; }
   $('err').style.display = 'none';
   const v = encodeURIComponent(ver);
   const pages = [...new Set(d.inquadrature.filter(s => s.tavola).map(s => s.tavola))];
   const clips = [...new Set(d.inquadrature.filter(s => s.clip).map(s => s.clip))];
-  const [pi, ci] = await Promise.all([Promise.all(pages.map(n => load(`/tavola/${n}?v=${v}`))), Promise.all(clips.map(k => load(`/clip/${k}?v=${v}`)))]);
+  const [pi, ci] = await Promise.all([Promise.all(pages.map(n => load(EMBED ? EMBED.tavole[n] : `/tavola/${n}?v=${v}`))), Promise.all(clips.map(k => load(EMBED ? EMBED.clip[k] : `/clip/${k}?v=${v}`)))]);
   IMG = {}; SPR = {};
   pages.forEach((n, k) => IMG[n] = pi[k]);
   clips.forEach((k, j) => SPR[k] = ci[j]);
@@ -84,7 +90,7 @@ async function fetchRegia(keepT) {
   document.title = 'Anteprima ' + d.nome;
   const wasPlaying = playing;
   if (wasPlaying) pause();
-  audio.src = `/audio.wav?v=${v}`;
+  audio.src = EMBED ? EMBED.audio : `/audio.wav?v=${v}`;
   t = keepT ? Math.min(t, d.totale) : 0;
   buildTimeline();
   $('stato').textContent = `${d.inquadrature.length} inquadrature · ${d.totale.toFixed(1)} s · aggiornata ${new Date().toLocaleTimeString()}`;
@@ -236,12 +242,14 @@ $('nf').onsubmit = async e => {
   e.preventDefault();
   const testo = $('nt').value.trim();
   if (!testo) return;
-  const r = await fetch('/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t, testo }) });
-  if (r.ok) { $('nt').value = ''; $('nt').blur(); loadNotes(); }
+  let ok = true;
+  if (EMBED) { const L = localNotes(); L.push(`- [ ] ${fmt(t)} #${indexAt(t) + 1} ${testo}`); saveLocal(L); }
+  else ok = (await fetch('/note', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t, testo }) })).ok;
+  if (ok) { $('nt').value = ''; $('nt').blur(); loadNotes(); }
 };
 
 async function loadNotes() {
-  const lines = await (await fetch('/note')).json();
+  const lines = EMBED ? localNotes() : await (await fetch('/note')).json();
   const ul = $('notes'); ul.innerHTML = '';
   const tl = $('timeline'); tl.querySelectorAll('.mark').forEach(e => e.remove());
   lines.forEach(l => {
@@ -259,13 +267,21 @@ async function loadNotes() {
 }
 
 // aggiornamento automatico quando cambiano regia o stile
-setInterval(async () => {
+if (!EMBED) setInterval(async () => {
   try {
     const v = await (await fetch('/versione')).text();
     if (v !== ver) await fetchRegia(true);
     else loadNotes();
   } catch (e) { $('stato').textContent = 'server non raggiungibile'; }
 }, 1500);
+
+$('copy').onclick = async () => {
+  const lines = EMBED ? localNotes() : await (await fetch('/note')).json();
+  const txt = `Note su ${R ? R.nome : ''}:\n` + lines.join('\n');
+  try { await navigator.clipboard.writeText(txt); $('copy').textContent = 'Copiate!'; }
+  catch (e) { prompt('Copia questo testo:', txt); }
+  setTimeout(() => $('copy').textContent = 'Copia note', 1500);
+};
 
 fetchRegia(false);
 </script>

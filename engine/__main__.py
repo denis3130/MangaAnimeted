@@ -12,10 +12,11 @@ def main():
     ap.add_argument("-o", "--out")
     ap.add_argument("--rifai", help="numeri delle inquadrature da rifare comunque, es. 3,7")
     ap.add_argument("--porta", type=int, default=8765, help="porta dell'anteprima")
+    ap.add_argument("--file", action="store_true", help="anteprima esportata in un unico file HTML")
     a = ap.parse_args()
     if a.comando == "anteprima":
-        from .anteprima import serve
-        return serve(a.regia, a.porta)
+        from .anteprima import export, serve
+        return export(a.regia, a.out) if a.file else serve(a.regia, a.porta)
     try:
         f = Film(a.regia)
     except RegiaError as e:
