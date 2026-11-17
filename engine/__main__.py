@@ -16,7 +16,10 @@ def main():
     a = ap.parse_args()
     if a.comando == "anteprima":
         from .anteprima import export, serve
-        return export(a.regia, a.out) if a.file else serve(a.regia, a.porta)
+        try:
+            return export(a.regia, a.out) if a.file else serve(a.regia, a.porta)
+        except FileNotFoundError as e:
+            sys.exit(f"Materiale mancante: {e}\nMetti tavole, clip e audio nella cartella 'base' indicata nella regia.")
     try:
         f = Film(a.regia)
     except RegiaError as e:
